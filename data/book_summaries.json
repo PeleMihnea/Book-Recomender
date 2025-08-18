@@ -1,0 +1,52 @@
+[
+  {
+    "title": "1984",
+    "summary": "Într-o societate distopică condusă de un regim totalitar, individul este supravegheat constant de figura amenințătoare a Marelui Frate. Winston Smith, angajat al Ministerului Adevărului, începe o luptă interioară pentru libertate și adevăr, riscând totul pentru gândirea independentă. Romanul explorează manipularea ideologică, propaganda și prețul întregii societăți.",
+    "themes": ["totalitarianism", "supraveghere", "libertate"]
+  },
+  {
+    "title": "The Hobbit",
+    "summary": "Bilbo Baggins, un hobbit confortabil și lipsit de aventuri, este recrutat de vrăjitorul Gandalf pentru a recupera comoara piticilor păzită de dragonul Smaug. Într-o serie de întâlniri cu creaturi fantastice și pericole, el descoperă curajul și resursele interioare. Povestea celebrează prietenia, creșterea personală și magia aventurii.",
+    "themes": ["aventură", "curaj", "prietenie"]
+  },
+  {
+    "title": "To Kill a Mockingbird",
+    "summary": "Într-un oraș din sudul american în anii 1930, tânăra Scout Finch și fratele ei Jem descoperă inegalitățile rasiale atunci când tatăl lor, avocatul Atticus Finch, apără un bărbat de culoare acuzat pe nedrept. Prin ochii copiilor, romanul dezvăluie prejudecăți, compasiune și nevoia de justiție. Este o poveste despre inocență pierdută și moralitate.",
+    "themes": ["rasism", "justiție", "inocență"]
+  },
+  {
+    "title": "The Great Gatsby",
+    "summary": "În plină eră a jazzului din anii 1920, naratorul Nick Carraway povestește obsesia lui Jay Gatsby pentru vechea sa iubire, Daisy Buchanan. Petrecerile extravagante și luxul ascund goluri emoționale și vise destrămate. Romanul critică visul american, vanitatea și superficialitatea elitei.",
+    "themes": ["visul american", "iluzie", "dezamăgire"]
+  },
+  {
+    "title": "Pride and Prejudice",
+    "summary": "Elizabeth Bennet și Mr. Darcy se întâlnesc inițial cu prejudecăți și mândrie, dar pe măsură ce află mai multe unul despre celălalt, învață să-și depășească preconcepțiile. Romanul explorează feminitatea, clasele sociale și importanța sincerității în relații. Umorul și dialogurile vivace fac din această poveste un clasic al literaturii.",
+    "themes": ["mândrie", "prejudecăți", "dragoste"]
+  },
+  {
+    "title": "Fahrenheit 451",
+    "summary": "Într-un viitor în care cărțile sunt interzise și ard cu flăcări, pompierul Guy Montag își pune întrebări despre rolul său și despre sensul cunoașterii. Întâlnirea cu o tânără liberă în gândire îi schimbă perspectivele, iar el începe să salveze cărți și idei. Romanul avertizează asupra cenzurii, ignoranței și puterii informației.",
+    "themes": ["cenzură", "contemplare", "rebeliune"]
+  },
+  {
+    "title": "Moby-Dick",
+    "summary": "Căpitanul Ahab, orbita de dorința de răzbunare împotriva balenei albe Moby Dick, pornește într-o călătorie obsesivă, în timp ce naratorul Ishmael relatează aventurile pe mare. Conflictul dintre om și natură și obsesia distructivă se împletesc cu reflecții filozofice. Este un epopeu despre destin, obsesie și necunoscut.",
+    "themes": ["obsesie", "natura", "destin"]
+  },
+  {
+    "title": "War and Peace",
+    "summary": "În perioada războaielor napoleoniene, aristocrația rusă trece prin schimbări sociale și personale profunde. Povestea urmărește destinele unor familii ca Rostov și Bolkonsky, îmbinând evenimente istorice cu introspecții filosofice despre viață și moarte. Romanul este o panoramă vastă a iubirii, războiului și istoriei.",
+    "themes": ["război", "istorie", "transformare"]
+  },
+  {
+    "title": "The Catcher in the Rye",
+    "summary": "Adolescentul rebel Holden Caulfield povestește cu umor și melancolie două zile din viața sa în New York, după ce a fost exmatriculat de la școală. El caută autenticitate într-o lume pe care o vede superficială și ipocrită. Romanul abordează alienarea, identitatea și trecerea spre maturitate.",
+    "themes": ["alienare", "adolescență", "identitate"]
+  },
+  {
+    "title": "Brave New World",
+    "summary": "O societate viitoare în care oamenii sunt creați în fabrici și controlați prin condiționare psihologică și droguri guvernamentale. Bernard Marx și John the Savage descoperă goliciunea unei utopii lipsite de emoții autentice. Romanul explorează uniformizarea, libertatea și riscurile progresului tehnologic.",
+    "themes": ["condiționare", "tehnologie", "libertate"]
+  }
+]

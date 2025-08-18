@@ -1,0 +1,7 @@
+.env
+.idea/vcs.xml
+.idea/modules.xml
+.idea/misc.xml
+.idea/inspectionProfiles/profiles_settings.xml
+.idea/Book Recomender.iml
+__pycache__/conftest.cpython-313-pytest-8.4.1.pyc

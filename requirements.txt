@@ -1,0 +1,11 @@
+fastapi
+uvicorn[standard]
+pydantic
+chromadb
+openai
+streamlit
+python-dotenv
+requests
+pytest
+pytest-asyncio
+pytest-mock
