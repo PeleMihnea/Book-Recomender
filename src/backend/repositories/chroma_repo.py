@@ -3,8 +3,6 @@ from typing import List
 
 import openai
 import chromadb
-from chromadb.config import Settings
-from openai import embeddings
 
 from src.backend.models.chat_models import RetrievedBook
 
@@ -12,11 +10,12 @@ class ChromaRepository:
     def __init__(self):
         # Load API key and init OpenAI
         openai.api_key = os.getenv("OPENAI_API_KEY", "")
+        chromadb_dir = os.getenv("CHROMA_DIR")
         if not openai.api_key:
             raise RuntimeError("OPENAI_API_KEY not set")
 
         # Initialize Chroma client & collection
-        self.client = chromadb.PersistentClient(path=r"C:\Endava\EndevLocal\Book Recomender\data\embeddings")
+        self.client = chromadb.PersistentClient(path=chromadb_dir)
         self.collection = self.client.get_collection("book_summaries")
 
     def _embed(self, text: str) -> List[float]:

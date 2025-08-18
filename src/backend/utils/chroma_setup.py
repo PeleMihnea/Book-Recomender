@@ -6,17 +6,19 @@ from dotenv import load_dotenv
 
 import openai
 import chromadb
-from chromadb.config import Settings
 
 def main():
     # Load OpenAI API key from environment
     load_dotenv()
     openai.api_key = os.getenv("OPENAI_API_KEY")
+    chromadb_dir= os.getenv("CHROMA_DIR")
+
+
     if not openai.api_key:
         raise ValueError("Please set OPENAI_API_KEY in your .env file")
 
     # Initialize ChromaDB (persist files under data/embeddings/)
-    client_chroma = chromadb.PersistentClient(path="../../../data/embeddings")
+    client_chroma = chromadb.PersistentClient(path=chromadb_dir)
 
     # Create or open the 'book_summaries' collection
     collection = client_chroma.get_or_create_collection(name="book_summaries")
