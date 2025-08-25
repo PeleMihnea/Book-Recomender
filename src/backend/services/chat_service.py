@@ -37,15 +37,30 @@ class ChatService:
             "carte", "cărți", "roman", "romane", "autor", "autori",
             "literatură", "literar", "gen", "genuri", "personaj", "personaje",
             "rezumat", "recomandare", "recomandări", "titlu", "lectură",
-            "temă", "teme", "operă", "opere",
+            "temă", "teme", "operă", "opere", "aventură", "aventuri", "fantasy", "istorie", "istoric", "science fiction", "sci-fi",
+            "dramă", "mister", "thriller", "horror", "comedie", "romantic", "romance",
+            "distopie", "utopie", "biografie", "autobiografie", "eseu", "poezie", "suspans",
+            "dragoste", "război", "magie", "mitologie", "familie", "prietenie", "libertate",
+            "călătorie", "căutare", "maturizare", "speranță", "curaj", "trădare", "morală",
+            "societate", "supraviețuire", "filosofie",
+            "poveste", "narațiune", "lectură", "lecturi", "narator", "conflict", "tematică",
+            "final", "personaj principal", "personaje secundare", "scenariu", "cadru", "acțiune",
+            "subiect", "titlu de carte", "recomandare literară", "critică literară",
+            "bestseller", "clasic", "modern", "contemporan", "epic", "fabulă",
+            "nuvelă", "povestire", "trilogie", "serie", "volum", "capitol",
             # Common verbs/variants
             "recomanzi", "recomand", "recomanda", "recomandati",
             "rezumati", "rezuma", "rezumatul", "citesc", "lectura",
             "genuri literare", "gen literar", "roman fantasy", "roman istoric",
+            "roman science fiction", "roman polițist", "roman de dragoste",
+            "carte de aventuri", "carte de mister", "carte de horror",
             # English (mixed inputs)
             "book", "books", "novel", "author", "authors", "genre", "genres",
             "character", "characters", "summary", "recommendation",
             "title", "reading", "theme", "themes",
+            "war", "magic", "love", "friendship", "history", "adventure", "plot", "theme",
+            "narrative", "ending", "main character", "genre", "fantasy novel", "classic",
+            "mystery", "epic", "hero", "villain", "conflict", "resolution", "literary work",
         }
         # Pre-compute normalized (accent-free) keywords
         self._book_keywords_norm = {self._strip_accents(w) for w in self._book_keywords}
@@ -180,6 +195,7 @@ class ChatService:
             f"User request: {question}\n\n"
             f"Candidates:\n{context_block}\n\n"
             "Output strictly as JSON: {\"title\": \"...\", \"reasoning\": \"...\"}"
+            "Give the answer in the same language as the question."
         )
 
     def _recommend(self, question: str, retrieved) -> Tuple[str, str]:
@@ -188,7 +204,7 @@ class ChatService:
             model="gpt-4o-mini",
             temperature=0.2,
             messages=[
-                {"role": "system", "content": "Recommend books only from the provided candidates."},
+                {"role": "system", "content": "Recomandă cărți doar dintre candidații furnizați."},
                 {"role": "user", "content": prompt},
             ],
         )
