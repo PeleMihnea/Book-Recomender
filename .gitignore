@@ -5,3 +5,6 @@
 .idea/inspectionProfiles/profiles_settings.xml
 .idea/Book Recomender.iml
 __pycache__/conftest.cpython-313-pytest-8.4.1.pyc
+*.pyc
+.cache/anchors_non_book.npy
+.cache/anchors_book.npy
