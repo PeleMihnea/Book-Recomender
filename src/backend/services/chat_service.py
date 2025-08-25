@@ -1,51 +1,174 @@
-import os
-import re
-from openai import OpenAI
-from typing import Tuple
-from dotenv import load_dotenv
+# src/backend/services/chat_service.py
+from __future__ import annotations
 
-from src.backend.repositories.chroma_repo import ChromaRepository
+import os
+import json
+import unicodedata
+from pathlib import Path
+from typing import List, Tuple
+
+import numpy as np
+from dotenv import load_dotenv
+from openai import OpenAI
+
 from src.backend.models.chat_models import ChatResponse
+from src.backend.repositories.chroma_repo import ChromaRepository
 from src.backend.tools.get_summary import SummaryTool
 
-# Load environment variables
 load_dotenv()
 
-class ChatService:
-    def __init__(self):
-        OpenAI.api_key = os.getenv("OPENAI_API_KEY", "")
-        if not OpenAI.api_key:
-            raise RuntimeError("OPENAI_API_KEY not set")
 
-        self.repo = ChromaRepository()
-        self.summary_tool = SummaryTool()
+class ChatService:
+    def __init__(self, anchors_path: str | None = None):
+        # Configure OpenAI v1 client
+        api_key = os.getenv("OPENAI_API_KEY", "")
+        if not api_key:
+            raise RuntimeError("OPENAI_API_KEY not set")
         self._client = OpenAI()
 
-    # ---------- moderation ----------
+        # Core dependencies
+        self.repo = ChromaRepository()
+        self.summary_tool = SummaryTool()
 
+        # ---------------- Domain gating configuration ----------------
+        # 1) Keywords (RO + EN). We normalize (remove accents) at runtime.
+        self._book_keywords: set[str] = {
+            # Romanian
+            "carte", "cărți", "roman", "romane", "autor", "autori",
+            "literatură", "literar", "gen", "genuri", "personaj", "personaje",
+            "rezumat", "recomandare", "recomandări", "titlu", "lectură",
+            "temă", "teme", "operă", "opere",
+            # Common verbs/variants
+            "recomanzi", "recomand", "recomanda", "recomandati",
+            "rezumati", "rezuma", "rezumatul", "citesc", "lectura",
+            "genuri literare", "gen literar", "roman fantasy", "roman istoric",
+            # English (mixed inputs)
+            "book", "books", "novel", "author", "authors", "genre", "genres",
+            "character", "characters", "summary", "recommendation",
+            "title", "reading", "theme", "themes",
+        }
+        # Pre-compute normalized (accent-free) keywords
+        self._book_keywords_norm = {self._strip_accents(w) for w in self._book_keywords}
+
+        # 2) Semantic anchors: in-domain vs out-of-domain
+        self._anchors_book = [
+            "Recomandări de cărți", "Rezumat de carte sau roman",
+            "Informații despre autori și genuri literare",
+            "Personaje, teme și subiecte literare",
+            "Caut o carte potrivită intereselor mele",
+            "Book recommendations", "Book or novel summary",
+            "Information about authors and literary genres",
+            "Characters, themes, and literary topics",
+        ]
+        self._anchors_non_book = [
+            "Automobile, mașini, vehicule, condus, motoare",
+            "Rețete de gătit, mâncare, bucătărie",
+            "Prognoza meteo și temperaturi",
+            "Programare, codare, inginerie software",
+            "Recomandări de călătorie, zboruri și hoteluri",
+            "Sport, fotbal, baschet, tenis",
+            "Politică și alegeri",
+        ]
+
+        # 3) Thresholds
+        self._threshold = 0.80            # strict semantic threshold without keywords
+        self._margin = 0.08               # book score must exceed non-book by margin
+        self._threshold_keywords = 0.70   # relaxed semantic threshold when keywords are present
+
+        # 4) Cache anchor embeddings to disk
+        cache_dir = Path(".cache")
+        cache_dir.mkdir(exist_ok=True)
+        book_cache = cache_dir / "anchors_book.npy"
+        non_book_cache = cache_dir / "anchors_non_book.npy"
+
+        if book_cache.exists():
+            self._book_vecs = np.load(book_cache)
+        else:
+            self._book_vecs = self._embed_texts(self._anchors_book)
+            np.save(book_cache, self._book_vecs)
+
+        if non_book_cache.exists():
+            self._non_book_vecs = np.load(non_book_cache)
+        else:
+            self._non_book_vecs = self._embed_texts(self._anchors_non_book)
+            np.save(non_book_cache, self._non_book_vecs)
+        # ---------------------------------------------------------------------
+
+    # ----------------------------- Embeddings -----------------------------
+    def _embed_texts(self, texts: List[str]) -> np.ndarray:
+        """Embed a list of texts using OpenAI embeddings and return an NxD matrix."""
+        resp = self._client.embeddings.create(
+            model="text-embedding-3-small",
+            input=texts,
+        )
+        vecs = [d.embedding for d in resp.data]
+        return np.asarray(vecs, dtype=np.float32)
+
+    @staticmethod
+    def _cosine(a: np.ndarray, b: np.ndarray) -> float:
+        denom = (np.linalg.norm(a) * np.linalg.norm(b)) or 1e-12
+        return float(np.dot(a, b) / denom)
+
+    def _max_cosine(self, v: np.ndarray, mat: np.ndarray) -> float:
+        return max(self._cosine(v, row) for row in mat) if len(mat) else 0.0
+
+    def _domain_scores(self, query: str) -> tuple[float, float]:
+        """Return (book_score, non_book_score) via cosine to anchor matrices."""
+        qv = self._embed_texts([query])[0]
+        return self._max_cosine(qv, self._book_vecs), self._max_cosine(qv, self._non_book_vecs)
+
+    # ----------------------------- Keywords ------------------------------
+    @staticmethod
+    def _strip_accents(s: str) -> str:
+        """Lowercase and remove diacritics (ăâîșț → aasit)."""
+        nfkd = unicodedata.normalize("NFD", s)
+        return "".join(c for c in nfkd if unicodedata.category(c) != "Mn").lower()
+
+    def _has_book_keywords(self, text: str) -> bool:
+        """Cheap allowlist gate using normalized keywords."""
+        t = self._strip_accents(text)
+        return any(k in t for k in self._book_keywords_norm)
+
+    # ----------------------------- Moderation ----------------------------
     def moderate(self, text: str) -> bool:
-        """Return True if safe, False if flagged."""
+        """
+        Composite moderation:
+        1) Safety moderation (OpenAI Moderations).
+        2) Book-domain gate: keywords -> allow (or relaxed semantic), else strict semantic.
+        Returns True if allowed, False if blocked.
+        """
+        # 1) Safety moderation
         try:
             resp = self._client.moderations.create(
                 model="omni-moderation-latest",
                 input=text
             )
-            # v1: attribute access
-            return not resp.results[0].flagged
+            if resp.results[0].flagged:
+                return False
         except Exception as e:
+            # If moderation fails, choose your policy. Here we log and continue.
             print(f"[WARN] Moderation API failed: {e}")
-            # choose your policy: allow (True) or block (False)
-            return True
 
-    # ---------- prompt building ----------
+        # 2) Domain gating
+        if self._has_book_keywords(text):
+            # Easiest: allow immediately (uncomment if you prefer this path)
+            return True
+            # Or: relaxed semantic check instead of immediate allow:
+            # book, non_book = self._domain_scores(text)
+            # return (book >= self._threshold_keywords) and (book >= non_book)
+
+        # No keywords → strict semantic in-vs-out
+        book, non_book = self._domain_scores(text)
+        return (book >= self._threshold) and (book >= non_book + self._margin)
+
+    # -------------------------- Prompt & Chat ----------------------------
     def _build_prompt(self, question: str, retrieved) -> str:
-        """
-        Build context for GPT with retrieved candidates.
-        """
+        """Build a compact context for the LLM from retrieved candidates."""
         context_lines = []
         for i, b in enumerate(retrieved, start=1):
+            themes = ", ".join(b.themes)
             context_lines.append(
-                f"{i}. Title: {b.title}\n   Themes: {', '.join(b.themes)}\n   Summary: {b.summary}"
+                f"{i}. Title: {b.title}\n   Themes: {themes}\n   Summary: {b.summary}"
             )
         context_block = "\n\n".join(context_lines)
 
@@ -59,41 +182,37 @@ class ChatService:
             "Output strictly as JSON: {\"title\": \"...\", \"reasoning\": \"...\"}"
         )
 
-    # ---------- LLM call ----------
-    def _recommend(self, question: str, retrieved) -> tuple[str, str]:
+    def _recommend(self, question: str, retrieved) -> Tuple[str, str]:
         prompt = self._build_prompt(question, retrieved)
-
         res = self._client.chat.completions.create(
             model="gpt-4o-mini",
+            temperature=0.2,
             messages=[
-                {"role": "system", "content": "Recomanzi cărți doar din candidații furnizați.."},
+                {"role": "system", "content": "Recommend books only from the provided candidates."},
                 {"role": "user", "content": prompt},
             ],
-            temperature=0.2,
         )
-
         text = res.choices[0].message.content or ""
 
-        # parse the JSON the model returns
-        import json
         try:
             data = json.loads(text)
             return data.get("title", ""), data.get("reasoning", "")
         except Exception:
-            # fallback to top retrieved
+            # Fallback: take top retrieved when parsing fails
             return (retrieved[0].title if retrieved else ""), "Fallback to top match."
 
-    # ---------- public entry ----------
+    # ----------------------------- Public API ----------------------------
     def handle_chat(self, question: str) -> ChatResponse:
-        # 1. Moderation
+        # 1) Moderation (safety + domain)
         if not self.moderate(question):
             return ChatResponse(
                 recommendation="",
-                reasoning="The message contained inappropriate language.",
+                reasoning=("Acest asistent răspunde doar la întrebări despre cărți "
+                           "(recomandări, rezumate, autori, genuri). Încearcă să reformulezi întrebarea în acest domeniu."),
                 detailed_summary="",
             )
 
-        # 2. Retrieve candidates
+        # 2) Retrieval
         candidates = self.repo.search(question, k=3)
         if not candidates:
             return ChatResponse(
@@ -102,10 +221,10 @@ class ChatService:
                 detailed_summary="",
             )
 
-        # 3. LLM picks best candidate
+        # 3) LLM pick
         title, reasoning = self._recommend(question, candidates)
 
-        # 4. Get full summary by title
+        # 4) Detailed summary via tool
         full_summary = self.summary_tool.get_summary_by_title(title)
 
         return ChatResponse(
