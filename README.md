@@ -53,19 +53,6 @@ streamlit run src/frontend/app.py
 
 ---
 
-## 🐳 Rulare cu Docker
-
-### 1. Build și rulare
-
-```bash
-docker-compose up --build
-```
-
-* FastAPI va rula pe `http://localhost:8000`
-* Streamlit pe `http://localhost:8501`
-
----
-
 ## 🧪 Teste rapide
 
 ### Exemple întrebări:
